@@ -4,7 +4,7 @@ import React from 'react';
 import { useProcessTradeData } from '@/hooks/useProcessTradeData';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { DossierDocument } from '@/components/pdf/DossierDocument';
-import { Upload, FileText, Download, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, Download, CheckCircle, AlertTriangle, BarChart3 } from 'lucide-react';
 
 export default function Dashboard() {
   const { data, isProcessing, handleFileUpload } = useProcessTradeData();
@@ -33,6 +33,37 @@ export default function Dashboard() {
           <p className="mt-2 text-sm text-gray-500">Only .csv files are supported</p>
         </div>
 
+        {/* Annual Progress Tracker */}
+        {data && (
+          <div className="mb-8 p-6 bg-white rounded-xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-gray-700">Annual CBAM Progress</h3>
+              </div>
+              <span className="text-sm font-bold text-blue-600">
+                {data.ytdTotalTonnes.toFixed(2)} / 50.00 Tonnes
+              </span>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-1000 ease-out ${
+                  data.isOverThreshold ? 'bg-red-500' : 'bg-blue-600'
+                }`}
+                style={{ width: `${Math.min((data.ytdTotalTonnes / 50) * 100, 100)}%` }}
+              />
+            </div>
+            
+            {data.isOverThreshold && (
+              <p className="text-red-600 text-xs mt-2 font-medium flex items-center gap-1">
+                <AlertTriangle size={14} /> 50-Tonne Annual Exemption Limit Reached
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Results Section */}
         {data && (
           <div className="space-y-6 animate-in fade-in duration-500">
@@ -43,12 +74,16 @@ export default function Dashboard() {
               </div>
               <p className="text-gray-800 text-lg mb-4">{data.summaryInstruction}</p>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-lg shadow-sm">
-                  <span className="text-sm text-gray-500">Total Weight</span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                  <span className="text-sm text-gray-500">This Upload</span>
                   <p className="text-2xl font-bold">{data.totalWeightTonnes.toFixed(2)} T</p>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm">
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                  <span className="text-sm text-gray-500">Annual Total</span>
+                  <p className="text-2xl font-bold">{data.ytdTotalTonnes.toFixed(2)} T</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                   <span className="text-sm text-gray-500">Total Value</span>
                   <p className="text-2xl font-bold">€{data.totalValue.toLocaleString()}</p>
                 </div>
