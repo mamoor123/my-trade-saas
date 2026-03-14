@@ -14,13 +14,19 @@ export interface TradeRow {
 export interface AnalysisResult {
   totalWeightKgs: number;
   totalWeightTonnes: number;
+  ytdTotalTonnes: number; // NEW: Tracks the annual cumulative total
   isOverThreshold: boolean;
   requiresY238: boolean;
   totalValue: number;
   summaryInstruction: string;
 }
 
-export const processTradeData = (rawData: any[]): AnalysisResult => {
+/**
+ * Processes trade data and calculates both per-upload and annual cumulative totals.
+ * @param rawData - The raw rows from the parsed CSV file.
+ * @param previousYtdWeight - The existing annual total fetched from the database.
+ */
+export const processTradeData = (rawData: any[], previousYtdWeight: number = 0): AnalysisResult => {
   // 1. Clean and Parse the data
   const processedRows: TradeRow[] = rawData.map((row) => ({
     date: row.Date || row.date || "",
@@ -32,24 +38,28 @@ export const processTradeData = (rawData: any[]): AnalysisResult => {
 
   // 2. Run the "50-Tonne Engine" Logic
   const totalWeightKgs = processedRows.reduce((sum, row) => sum + row.weight, 0);
-  const totalWeightTonnes = totalWeightKgs / 1000;
+  const currentUploadTonnes = totalWeightKgs / 1000;
   const totalValue = processedRows.reduce((sum, row) => sum + row.value, 0);
+
+  // NEW LOGIC: Annual Total = Stored Weight + Current Upload
+  const ytdTotalTonnes = previousYtdWeight + currentUploadTonnes;
 
   // The specific threshold for your tool
   const THRESHOLD = 50; 
-  const isOverThreshold = totalWeightTonnes >= THRESHOLD;
+  const isOverThreshold = ytdTotalTonnes >= THRESHOLD;
 
-  // 3. Determine if TARIC Code Y238 is required
+  // 3. Determine if TARIC Code Y238 is required based on cumulative YTD total
   const requiresY238 = isOverThreshold;
 
-  // 4. Generate the Summary Instruction for the UI
+  // 4. Generate the Summary Instruction for the UI (Updated for YTD)
   const summaryInstruction = isOverThreshold
-    ? "ACTION REQUIRED: Total weight exceeds 50 tonnes. Customs Dossier must include TARIC Y238 verification."
-    : "COMPLIANCE OK: Total weight is within standard limits.";
+    ? `ACTION REQUIRED: Annual total (${ytdTotalTonnes.toFixed(2)}T) exceeds 50 tonnes. Customs Dossier must include TARIC Y238 verification.`
+    : `COMPLIANCE OK: Annual total (${ytdTotalTonnes.toFixed(2)}T) is within standard limits.`;
 
   return {
     totalWeightKgs,
-    totalWeightTonnes,
+    totalWeightTonnes: currentUploadTonnes,
+    ytdTotalTonnes, // Return the new cumulative total
     isOverThreshold,
     requiresY238,
     totalValue,
